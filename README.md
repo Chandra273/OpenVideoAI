@@ -66,4 +66,181 @@ Rather than using AI as a black box, OpenVideoAI aims to become a platform for b
 
                           ▼
 
+# Contributing to OpenVideoAI
+
+Thank you for your interest in contributing.
+
+## Ways to Contribute
+
+- Bug fixes
+- Performance optimization
+- New diffusion model support
+- UI improvements
+- Documentation
+- Tutorials
+- Fine-tuning experiments
+
+## Development Setup
+
+1. Fork repository
+2. Clone locally
+3. Create virtual environment
+4. Install requirements
+
+```bash
+git clone https://github.com/yourusername/OpenVideoAI.git
+
+cd OpenVideoAI
+
+python -m venv venv
+
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+# System Design
+
+## High Level Design
+
+User Prompt
+→ Prompt Processor
+→ Text Encoder
+→ Video Generator
+→ Video Renderer
+→ Storage Layer
+→ User Download
+
+## Modules
+
+### Prompt Module
+
+Responsibilities:
+
+- prompt validation
+- prompt enhancements
+- negative prompts
+
+### Inference Module
+
+Responsibilities:
+
+- model loading
+- memory management
+- generation
+
+### Render Module
+
+Responsibilities:
+
+- frame extraction
+- video encoding
+- mp4 export
+
+### Model Registry
+
+Responsibilities:
+
+- checkpoint storage
+- version control
+- model metadata
+
+# Supported Models
+
+## Image Models
+
+- SDXL
+- SDXL Turbo
+- Flux
+
+## Video Models
+
+- CogVideoX
+- Wan 2.1
+- Stable Video Diffusion
+- AnimateDiff
+
+## Future Models
+
+- Open Sora
+- Hunyuan Video
+- Mochi
+- LTX Video
+
+## Fine Tuning
+
+- LoRA
+- DreamBooth
+- QLoRA
+
+# Research Roadmap
+
+## Stage 1
+
+Text → Image
+
+Goal:
+
+Understand diffusion basics
+
+Deliverable:
+
+Generate realistic images
+
+---
+
+## Stage 2
+
+Image → Video
+
+Goal:
+
+Learn motion generation
+
+Deliverable:
+
+Animate static images
+
+---
+
+## Stage 3
+
+Text → Video
+
+Goal:
+
+Generate complete videos
+
+Deliverable:
+
+Create videos from prompts
+
+---
+
+## Stage 4
+
+Character Consistency
+
+Goal:
+
+Preserve characters across scenes
+
+---
+
+## Stage 5
+
+Movie Generation
+
+Goal:
+
+Story → Scenes → Video
+
+# Deployment Guide
+
+## Local Deployment
+
+Run:
+
+```bash
+python app.py
+
                 Generated Video
