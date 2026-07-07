@@ -1,0 +1,133 @@
+OpenVideoAI backend - Function reference and explanations
+
+This note documents the purpose and important lines of functions and key components
+in the backend Python code (backend/app/*).
+
+File: backend/app/main.py
+- app: FastAPI instance. Central application object where middleware and routers are mounted.
+- health(): async GET /health
+  - Purpose: lightweight liveness check used by health probes.
+  - Returns: {"status": "ok"}.
+  - Important: kept async to be non-blocking.
+- read_root(): GET /
+  - Purpose: simple root message to verify server is running.
+  - Returns: {"message": "OpenVideoAI backend is running"}.
+- on_startup(): startup event handler
+  - Purpose: development convenience: imports `Base` and `engine` and calls
+    `Base.metadata.create_all(bind=engine)` to create DB tables if they don't exist.
+  - Important: In production prefer Alembic migrations instead of auto-creating tables.
+  - Mounted via `@app.on_event("startup")`.
+
+File: backend/app/core/config.py
+- Settings (Pydantic BaseSettings subclass)
+  - Purpose: central typed configuration loaded from environment or .env file.
+  - Attributes: `DATABASE_URL`, `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`.
+  - Config.env_file: points to repository `.env` for local development.
+- settings: `Settings()` instance used throughout the app.
+
+File: backend/app/core/security.py
+- verify_password(plain_password: str, hashed_password: str) -> bool
+  - Purpose: check whether `plain_password` matches `hashed_password`.
+  - Implementation: primarily uses `passlib.hash.pbkdf2_sha256.verify`.
+    Falls back to `pwd_context.verify` for compatibility.
+  - Important: avoids depending on bcrypt backend which can raise compatibility errors.
+
+- get_password_hash(password: str) -> str
+  - Purpose: produce a secure password hash for storage.
+  - Implementation: uses `pbkdf2_sha256.hash`; falls back to `pwd_context.hash`.
+  - Important: hashing should be one-way; do not store plaintext.
+
+- create_access_token(subject: str, expires_delta: Optional[timedelta]) -> str
+  - Purpose: create a signed JWT with `sub` (subject, usually user id) and `exp` (expiry).
+  - Implementation: uses `jose.jwt.encode` with HS256 and `settings.SECRET_KEY`.
+  - Important: keep `SECRET_KEY` secret in production.
+
+File: backend/app/db/session.py
+- engine: SQLAlchemy engine created from `settings.DATABASE_URL`.
+  - For SQLite, `connect_args={'check_same_thread': False}` is passed for convenience.
+- SessionLocal: `sessionmaker` factory for DB sessions used as dependency.
+- Base: `declarative_base()` used as ORM base class for models.
+- get_db(): generator dependency
+  - Purpose: yield a DB session for request handlers and ensure it is closed.
+  - Usage: used with `Depends(get_db)` in endpoints.
+
+File: backend/app/models/user.py
+- class User(Base) (SQLAlchemy ORM model)
+  - Purpose: represents the `users` table with columns: `id`, `email`, `hashed_password`,
+    `is_active`, `created_at`.
+  - Important: `hashed_password` stores the password hash only.
+
+File: backend/app/schemas/user.py
+- UserCreate (Pydantic)
+  - Purpose: request body shape for registration/login. Fields: `email` (validated) and `password`.
+- UserRead (Pydantic)
+  - Purpose: response shape when returning user info. Fields: `id`, `email`, `is_active`, `created_at`.
+  - `orm_mode = True` allows returning ORM objects directly.
+- Token (Pydantic)
+  - Purpose: response shape for authentication token: `access_token` and `token_type`.
+
+File: backend/app/api/deps.py
+- security: HTTPBearer() instance
+  - Purpose: FastAPI-security helper that reads the Authorization header and returns credentials.
+- get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User
+  - Purpose: dependency that decodes a Bearer JWT, validates it, converts `sub` claim to int user id,
+    loads the user from DB, and returns the `User` ORM instance.
+  - Behavior: raises `HTTPException(401)` if token invalid; `HTTPException(404)` if user not found.
+  - Important lines: `jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])` and `db.query(User).filter(User.id == user_id).first()`.
+
+File: backend/app/api/v1/auth.py
+- _validate_password(password: str) -> None
+  - Purpose: enforce password presence and max byte length (72 bytes, bcrypt legacy limit).
+  - Raises `HTTPException(400)` for missing or too-long passwords.
+
+- register(user_in: UserCreate, db: Session = Depends(get_db)) -> UserRead
+  - Purpose: create a new user record.
+  - Steps:
+    1. Check if user with same email already exists -> 400.
+    2. Log/debug the incoming password repr/byte length (temporary diagnostic).
+    3. Validate password length via `_validate_password`.
+    4. Hash password using `get_password_hash`.
+    5. Create, commit, and refresh the `User` ORM instance and return it.
+  - Errors: Surface hashing errors as 400; duplicate email returns 400.
+  - Important: Never log raw passwords in production; logging here is for debugging only and should be removed.
+
+- login(user_in: UserCreate, db: Session = Depends(get_db)) -> Token
+  - Purpose: authenticate a user and return a JWT token.
+  - Steps:
+    1. Lookup user by email.
+    2. Verify password with `verify_password`.
+    3. Create access token with `create_access_token(subject=str(user.id))` and return it.
+  - Errors: incorrect credentials result in 401 Unauthorized.
+
+File: backend/app/api/v1/users.py
+- read_me(current_user: User = Depends(get_current_user)) -> UserRead
+  - Purpose: protected endpoint that returns the current authenticated user's public data.
+  - Behavior: `current_user` is populated by `get_current_user` which validates the JWT.
+
+Notes / Best practices reminders
+- Secrets: `SECRET_KEY` in `core/config.py` must be replaced with a secure, random value in production and not checked into source control.
+- Password hashing: For production prefer `bcrypt` or Argon2 with properly installed binary dependencies; pbkdf2 is acceptable for development/testing.
+- Database migrations: Replace `Base.metadata.create_all()` with Alembic for controlled schema migration in production.
+- Logging: remove debug prints that contain passwords before committing code; use structured logs and avoid sensitive data.
+- Authentication: consider token revocation, refresh tokens, and stronger expiry policies for production.
+
+If you'd like, I can generate a markdown version of this note, remove the temporary debug prints, or expand this into a developer README with run/debug instructions.
+
+What I did till now
+- **Scaffold:** Created backend FastAPI app structure, initial Docker and frontend placeholders.
+- **Auth:** Implemented registration and login endpoints (`/api/v1/auth`), JWT creation, and `get_current_user` dependency.
+- **Security:** Switched to `pbkdf2_sha256` hashing for development to avoid bcrypt native dependency issues; added password validation to avoid bcrypt 72-byte limit errors.
+- **DB:** Added SQLAlchemy models, session management, and a startup convenience to create tables (development only).
+- **Docs:** Added `backend/note.txt` documenting functions and architecture.
+
+Next steps
+- **Remove debug prints:** Remove any logging that outputs raw passwords in `backend/app/api/v1/auth.py`.
+- **Migrations:** Add Alembic and create initial migration; switch to PostgreSQL for production via `DATABASE_URL`.
+- **Hashing:** Decide production KDF (bcrypt or Argon2) and update `requirements.txt` and deployment to include native dependencies.
+- **Token lifecycle:** Add refresh tokens and token revocation/listing if needed for security.
+- **Storage & Jobs:** Design text-to-video job queue, background workers, and video storage (filesystem or S3), plus endpoints for history and download.
+- **Frontend:** Implement React UI for signup/login, job submission, and history viewing; wire to backend endpoints.
+- **Logging & Monitoring:** Add structured logging, error handling middleware, and basic metrics/health probes.
+- **CI/CD & Docker:** Finalize Dockerfiles, docker-compose services, and add CI pipelines for tests/builds.
+
+If you want, I can remove the debug prints now and open a PR-style patch with the hashing migration notes.
