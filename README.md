@@ -28,44 +28,6 @@ Rather than using AI as a black box, OpenVideoAI aims to become a platform for b
 - Create a reusable generative AI platform
 
 ---
-
-# High-Level Architecture
-
-```text
-                ┌─────────────────────┐
-                │     Gradio UI       │
-                └─────────┬───────────┘
-                          │
-                          ▼
-                ┌─────────────────────┐
-                │     FastAPI API     │
-                └─────────┬───────────┘
-                          │
-                          ▼
-                ┌─────────────────────┐
-                │ Video Generation    │
-                │ Service             │
-                └─────────┬───────────┘
-                          │
-     ┌────────────────────┼─────────────────────┐
-     ▼                    ▼                     ▼
-
- Text Encoder       Diffusion Model      Motion Module
-
-     ▼                    ▼                     ▼
-
-            Video Latent Generation
-
-                          ▼
-
-              Frame Decoder (VAE)
-
-                          ▼
-
-                 MP4 Renderer
-
-                          ▼
-
 # Contributing to OpenVideoAI
 
 Thank you for your interest in contributing.
@@ -87,7 +49,7 @@ Thank you for your interest in contributing.
 3. Create virtual environment
 4. Install requirements
 
-```bash
+## bash
 git clone https://github.com/yourusername/OpenVideoAI.git
 
 cd OpenVideoAI
@@ -240,7 +202,42 @@ Story → Scenes → Video
 
 Run:
 
-```bash
 python app.py
 
-                Generated Video
+# High-Level Architecture
+
+```text
+                ┌─────────────────────┐
+                │     Gradio UI       │
+                └─────────┬───────────┘
+                          │
+                          ▼
+                ┌─────────────────────┐
+                │     FastAPI API     │
+                └─────────┬───────────┘
+                          │
+                          ▼
+                ┌─────────────────────┐
+                │ Video Generation    │
+                │ Service             │
+                └─────────┬───────────┘
+                          │
+     ┌────────────────────┼─────────────────────┐
+     ▼                    ▼                     ▼
+
+ Text Encoder       Diffusion Model      Motion Module
+
+     ▼                    ▼                     ▼
+
+            Video Latent Generation
+
+                          ▼
+
+              Frame Decoder (VAE)
+
+                          ▼
+
+                 MP4 Renderer
+
+                          ▼
+
