@@ -1,3 +1,24 @@
+# OpenVideoAI (Backend-first)
+
+This repository contains a FastAPI backend for a Text-to-Video SaaS project. We're building iteratively — no frontend for now. The service will accept text prompts and generate simple videos saved to the user's Downloads folder.
+
+Run locally:
+
+1. Create a virtual environment and install dependencies:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+2. Start the app:
+
+```powershell
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Visit `http://localhost:8000/health`.
 # OpenVideoAI
 
 OpenVideoAI is a local, open-source Text-to-Video AI platform designed to generate high-quality videos directly from text prompts without relying on expensive commercial services such as Veo, Kling, Runway, Pika, or Sora.
